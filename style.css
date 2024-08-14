@@ -1,0 +1,18 @@
+.grid {
+    display: grid;
+    grid-template-columns: 80px 80px 80px;
+    grid-template-rows: 80px 80px 80px;
+    width: 50%;
+    height: 50%;
+}
+
+.spot {
+    border: 1px solid grey;
+    padding: 20px;
+}
+
+button {
+    border: 1px solid black;
+    background: peachpuff;
+    margin-bottom: 20px;
+}
