@@ -1,9 +1,14 @@
 const Gameboard = (function () {
     let arr = ['', '', '', '', '', '', '', '', ''];
+    const getGameboard = () => arr;
+    const getCell = (index) => arr[index];
+    const updateCell = (index) => arr[index] = Game.getCurrentPlayer().getMarker();
+    const resetGameboard = () => arr.fill('');
     return {
-        getGameboard: () => arr,
-        updateGameboard: (spot, marker) => arr[spot] = marker,
-        resetGameboard: () => arr.fill('')
+        getGameboard,
+        getCell,
+        updateCell,
+        resetGameboard
     }
 })();
 
@@ -25,50 +30,109 @@ const Game = (function () {
         [0, 4, 8], // diagonal from top-left to bottom-right
         [2, 4, 6]  // diagonal from top-right to bottom-left
     ];
+    let running = false;
+    let players = [];
+    let currentPlayerIndex;
+    const startGame = (player1name, player2name) => {
+        players = [Player(player1name, 'X'), Player(player2name, 'O')];
+        running = true;
+        currentPlayerIndex = 0;
+        Gameboard.resetGameboard();
+        DisplayController.updateStatusText(`${Game.getCurrentPlayer().name}'s turn`);
+    }
+    const getPlayers = () => players;
 
-    let isGameOver = false;
-    let winner;
-    let isDraw;
+    const checkWinner = () => {
+        const gameboard = Gameboard.getGameboard();
+        for (let combo of winningCombos) {
+            const [cellA, cellB, cellC] = combo;
+            if (gameboard[cellA] && gameboard[cellA] === gameboard[cellB] && gameboard[cellA] === gameboard[cellC]) {
+                DisplayController.updateStatusText(`${getCurrentPlayer().name} wins!`);
+                running = false;
+                return true;
+            }
+        }
+        currentPlayerIndex = currentPlayerIndex === 0 ? 1 : 0;
+        if (!gameboard.includes('')) {
+            DisplayController.updateStatusText(`It's a draw!`);
+        } else {
+            DisplayController.updateStatusText(`${Game.getCurrentPlayer().name}'s turn`);
+        }
+    }
+    const playRound = (index) => {
+        if (running && Gameboard.getCell(index) === '') {
+            Gameboard.updateCell(index);
+            DisplayController.renderCell(index,);
+            checkWinner();
+        };
+    }
+    const resetGame = () => {
+        Gameboard.resetGameboard();
+        currentPlayerIndex = 0;
+        DisplayController.updateStatusText(`${Game.getCurrentPlayer().name}'s turn`);
+        winner = null;
+        running = true;
+        isDraw = false;
+    };
+
+    const getCurrentPlayer = () => players[currentPlayerIndex];
 
     return {
-        play: (spot, marker) => {
-            let gameboard = Gameboard.getGameboard();
-            if (!isGameOver && !gameboard[spot]) { Gameboard.updateGameboard(spot, marker) };
-            Game.checkGame();
-        },
-        checkGame: () => {
-            let gameboard = Gameboard.getGameboard();
-            for (let combo of winningCombos) {
-                if (gameboard[combo[0]] && gameboard[combo[0]] === gameboard[combo[1]] && gameboard[combo[1]] === gameboard[combo[2]]) {
-                    console.log(`${gameboard[combo[0]]} wins!`);
-                    isGameOver = true;
-                    winner = gameboard[combo[0]];
-                    return;
-                }
-            }
-            // check if it's a draw
-            const isMarked = marker => marker === 'x' || marker === 'o';
-            isDraw = gameboard.every(spot => isMarked(spot));
-            if (!isGameOver) { console.log('No winner yet.') };
-            if (isDraw) {
-                console.log('It\'s a draw')
-                isGameOver = true;
-            }
-            console.log(gameboard);
-            return;
-        },
-        resetGame: () => {
-            Gameboard.resetGameboard();
-            winner = null;
-            isGameOver = false;
-            isDraw = false;
-        }
+        getPlayers,
+        playRound,
+        isRunning: () => running,
+        checkWinner,
+        resetGame,
+        getCurrentPlayer,
+        startGame
     }
 })();
 
-const player1 = Player('player1', 'o');
-const player2 = Player('player2', 'x');
 
-Game.play(0, player2.getMarker());
-Game.play(1, player2.getMarker());
-Game.play(2, player2.getMarker());
+const DisplayController = (function () {
+    const cells = document.querySelectorAll('.cell');
+    const statusText = document.querySelector('#statusText');
+    const startButton = document.querySelector("#startBtn");
+    const restartBtn = document.querySelector("#restartBtn");
+    const player1Input = document.querySelector("#player1");
+    const player2Input = document.querySelector("#player2");
+
+    const initialize = () => {
+        cells.forEach(cell => cell.addEventListener('click', (e) => {
+            let index = e.target.getAttribute('data-index');
+            if (Game.isRunning()) { Game.playRound(index, Game.getCurrentPlayer().getMarker()); }
+        }));
+        restartBtn.addEventListener('click', () => {
+            Game.resetGame();
+            clearBoard();
+        });
+        startButton.addEventListener('click', () => {
+            let player1Name = player1Input.value;
+            let player2Name = player2Input.value;
+            if (player1Input.value && player2Input.value) {
+                clearBoard();
+                Game.startGame(player1Name, player2Name);
+            }
+        })
+    };
+
+    const clearBoard = () => {
+        cells.forEach(cell => cell.textContent = '');
+    }
+
+    const renderCell = (index) => {
+        cells[index].textContent = Game.getCurrentPlayer().getMarker();
+    };
+
+    const updateStatusText = (message) => {
+        statusText.textContent = message;
+    };
+
+    return {
+        initialize,
+        renderCell,
+        updateStatusText
+    }
+})();
+
+DisplayController.initialize();
